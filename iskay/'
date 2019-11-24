@@ -1,0 +1,20 @@
+import numpy as np
+
+
+def indicesToDrop(df, Ngroups, randomize=True):
+    '''Receives a pandas dataframe and returns the indices that need to
+    be dropped in every JackKnife iteration to have a Ngroups JackKnife.
+
+    It will return a list of numpy arrays. There will be Ngroups numpy arrays.
+    '''
+    indices = df.index.values
+    if randomize:
+        np.random.seed(4)  #to make it predictable
+        np.random.shuffle(indices)
+    return np.array_split(indices, Ngroups)
+
+
+class JK():
+    def __init__(self, df, params):
+        self.params = params
+        #need to run the analysis and save its output
