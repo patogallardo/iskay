@@ -4,7 +4,6 @@ At opening, the class cat has amenities to retrieve and open file.
 It also can sort, select the first N elements and apply an arbitrary
 query in pandas style.'''
 from iskay import transferDataTools
-from iskay import envVars
 import glob
 import os
 import pandas as pd
@@ -15,7 +14,7 @@ class cat(object):
     def __init__(self, fname,
                  sortBy=None, query=None, howMany=None):
         '''
-        fname: fname of csv file, will transfer it if not in local path.
+        fname: fname of csv file.
         sortBy: None: do nothing. string: name of the column to sort by.
                 Sorting will be done in descending order. Largest first
                 (zero index will have the largest values)
@@ -23,10 +22,9 @@ class cat(object):
         howMany: how many columns to take from the data (if you want
                 a smaller sample. Use this in conjunction to sortBy.
         '''
-        print("Searching catalog file: %s..." % fname)
-        fname_fullpath = os.path.join(envVars.localDataPath, fname)
-        transferDataTools.checkIfExistsAndCopyIfNot(fname)
         self.fname = fname
+
+        fname_fullpath = transferDataTools.searchCatalog(fname)
 
         self.fname_fullpath = fname_fullpath
         df = pd.read_csv(fname_fullpath, comment='#')

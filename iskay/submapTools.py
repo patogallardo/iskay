@@ -29,8 +29,10 @@ def getApPhotometryForCatalogPositions(theMap, ras_deg, decs_deg,
     semiWidth_deg = 4.0 * r_ring_arcmin/60.
 
     if not silent:
-        widgets = [progressbar.Percentage(), progressbar.Bar(), progressbar.ETA()]
-        bar = progressbar.ProgressBar(widgets=widgets, max_value=howMany).start()
+        widgets = [progressbar.Percentage(), progressbar.Bar(),
+                   progressbar.ETA()]
+        bar = progressbar.ProgressBar(widgets=widgets,
+                                      max_value=howMany).start()
 
     for j in xrange(howMany):
         ra_deg, dec_deg = ras_deg[j], decs_deg[j]

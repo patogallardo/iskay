@@ -33,6 +33,23 @@ def get_tzav(dTs, zs, sigma_z):
 #end get_tzav formulas
 
 
+def sample_tzav(dTs, zs, sigma_z, z_N_samples=1000):
+    '''This function is used for bootstrap analises of get_tzav only
+    not used in production of ksz curves.
+    dTs: entire list of dT decremets
+    zs: entire list of redshifts
+    sigma_z: idem to get_tzav'''
+    zmin, zmax = zs.min(), zs.max()
+    z_subsampled = np.linspace(zmin, zmax, z_N_samples)
+
+    res1 = np.zeros(z_subsampled.shape[0])
+    res2 = np.zeros(z_subsampled.shape[0])
+
+    get_tzav_and_w_nb(dTs, zs, z_subsampled, sigma_z, res1, res2)
+    tzav_subsampled = res1/res2
+    return z_subsampled, tzav_subsampled
+
+
 def get_tzav_fast(dTs, zs, sigma_z):
     '''Subsample and interpolate Tzav to make it fast.
     dTs: entire list of dT decrements

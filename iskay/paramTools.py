@@ -22,7 +22,11 @@ class params:
         self.NAME = c.get('Name', 'analysisname')
         self.FITS_FNAME = c.get('Map', 'fits_fname')
         self.DIVMAP_FNAME = c.get('Map', 'divmap_fname')
-        self.MASKMAP_FNAME = c.get('Map', 'maskmap_fname')
+        self.MASKMAP_FNAME1 = c.get('Map', 'maskmap_fname1')
+        self.MASKMAP_FNAME2 = c.get('Map', 'maskmap_fname2')
+        self.MASKMAP_FNAME3 = c.get('Map', 'maskmap_fname3')
+        self.MASKMAP_FNAME4 = c.get('Map', 'maskmap_fname4')
+
         self.CAT_FNAME = c.get('Catalog', 'catalog_fname')
         self.CAT_QUERY = c.get('Catalog', 'query')
         self.N_OBJ = c.getint('AnalysisParams', 'n_obj')
@@ -56,7 +60,10 @@ def generateDefaultParams():
     c.add_section('Map')
     c.set('Map', 'FITS_FNAME', 'act_planck_f150_map_mono.fits')
     c.set('Map', 'DIVMAP_FNAME', 'act_planck_f150_div_mono.fits')
-    c.set('Map', 'MASKMAP_FNAME', 'None')
+    c.set('Map', 'MASKMAP_FNAME1', 'None')
+    c.set('Map', 'MASKMAP_FNAME2', 'None')
+    c.set('Map', 'MASKMAP_FNAME3', 'None')
+    c.set('Map', 'MASKMAP_FNAME4', 'None')
 
     c.add_section('Catalog')
     c.set('Catalog', 'CATALOG_FNAME',
@@ -68,7 +75,7 @@ def generateDefaultParams():
     c.set('AnalysisParams', 'PhotoDiskR', '2.1')
     c.set('AnalysisParams', 'PhotoRingR', '%s' % (2.1 * 1.4))
     c.set('AnalysisParams', 'Sigma_z', '0.01')
-    c.set('AnalysisParams', 'bin_size_mpc', '5.0')
+    c.set('AnalysisParams', 'bin_size_mpc', '10.0')
     c.set('AnalysisParams', 'n_bins', '40')
     c.set('AnalysisParams', 'get_tzav_fast', 'True')
     c.set('AnalysisParams', 'do_variance_weighted', 'False')
