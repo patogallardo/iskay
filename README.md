@@ -3,8 +3,6 @@
 
 ![alt text](https://raw.githubusercontent.com/patogallardo/iskay/master/imgs/cover.PNG "ksz diagram")
 
-Written by P. Gallardo based on code named "pairwiser" by F. de Bernardis.
-
 Computes the pairwise kinetic Sunyaev-Zeldovich effect estimator starting from maps of the CMB.
 
 This code is able to: take a catalog of galaxy positions, redshifts and luminosities, produce aperture photometry for the given galaxy centerings with a circular aperture  which does not distort the frequency domain content of the substamps (via zero-padding), reprojects to locally square grid and naturally takes care of sub pixel position of galaxy centerings by finely discretizing the interpolated map. The reprojection and interpolation is done nativelly in pixell.
@@ -21,5 +19,12 @@ For a given ksz curve, the estimation of errorbars  implemented by the use of a 
 
 This piece of software is designed to be deployed on a cluster. Fast implementation was achieved in Python using a just in time compiler (numba), which enables the use of multiple cores per machine. Massive deployments are supported by the use of Dask and this is done to run all the jackknife replicants in different nodes in a supercomputer.
 
+
+Written by P. Gallardo based on code named "pairwiser" by F. de Bernardis.
+
+## References:
 [1] Gallardo 2019: Optimizing future CMB observatories and measuring galaxy cluster motions with the Atacama Cosmology Telescope
+
 [2] deBernardis 2016: Detection of the pairwise kinematic Sunyaev-Zel'dovich effect with BOSS DR11 and the Atacama Cosmology Telescope
+
+
