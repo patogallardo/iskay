@@ -9,15 +9,19 @@ This code is able to: take a catalog of galaxy positions, redshifts and luminosi
 
 The computation is split into two parts. The aperture photometry extraction and the ksz estimatimation.
 
-The aperture photometry extraction uses the pixell library, which takes care of the reprojection and supersampling to compute the fractional pixel weighting, which allows proper centering. This part of the computation is embarrasingly parallel, so the computation is split into segments and iskay handles each chunk separately in a slurm type cluster.
+1) The aperture photometry extraction uses the pixell library, which takes care of the reprojection and supersampling to compute the fractional pixel weighting, which allows proper centering. This part of the computation is embarrasingly parallel, so the computation is split into segments and iskay handles each chunk separately in a slurm type cluster.
 
-The pairwise ksz estimation computes the geometrical weighhts c_ij and carries out the sum over all the pairs of objects for a given luminosity cut (actually, the user can sepecify an arbitrary cut in any of the variables the catalog contains, these are passed in the form of a text string in a format compliant with the pandas dataframe.query method). 
+2) The pairwise ksz estimation computes the geometrical weighhts c_ij and carries out the sum over all the pairs of objects for a given luminosity cut (actually, the user can sepecify an arbitrary cut in any of the variables the catalog contains, these are passed in the form of a text string in a format compliant with the pandas dataframe.query method). 
+
+### kSZ curves
 
 The kSZ curve can be computed with equal weights or variance weights. The variance weighted estimator is computed following equation 5.26 in [1], while the equal weights version is more standard and is presented in [2] and the references therein.
 
+### Jackknifes
 For a given ksz curve, the estimation of errorbars is implemented by the use of a jackknife resampling in galaxy space (as opposed to galaxy pair space which is not free from assumptions). Computation of covariance matrices from this resampling is supported. 
 
-This piece of software is designed to be deployed on a cluster. Fast implementation was achieved in Python using a just in time compiler (numba), which enables the use of multiple cores per machine. Massive deployments are supported by the use of Dask. This is done to run all the jackknife replicants in different nodes in a supercomputer.
+### Implementation details
+This software is designed to be deployed on a cluster. Fast implementation was achieved in Python using a just in time compiler (numba), which enables the use of multiple cores per machine. Massive deployments are supported by the use of Dask. This is done to run all the jackknife replicants in different nodes in a supercomputer.
 
 Written by P. Gallardo based on code named "pairwiser" by F. de Bernardis.
 
@@ -40,11 +44,11 @@ This is the heavy part of the calculation. It was implemented using Dask to spli
 
 Results are stored in a pickle object. The pickle object is called a 'JK' which has all the variables of interest. Like: the ksz curve, the separation bins, all the jk replicants, the covariance matrix, the errorbars.
 
-### Tests
+## Tests
 
 Effort has been put into testing this pipeline. The folder tests contains automated tests that are done to ensure consistency. The method I used was the following: Run FdB's pairwise estimator on an aperture photometry sample, write a single threaded version for iskay. Parallelize the pairwiser function while ensuring equal results to the parent functions in FdB's code. Once the parallel version is implemented, implement the distribted version and compare results to the parent functions to ensure no data is being missed.
 
-Modifications to the original code were made such that: variance weighting reproduces the original FdB's code for equal weights, uneven binning tools also are able to generate the original results.
+Modifications to the original code were made such that: variance weighting reproduces the original FdB's code for equal weights, uneven binning tools also are able to generate the original results for equal width bins.
 
 ## References:
 [1] Gallardo 2019: Optimizing future CMB observatories and measuring galaxy cluster motions with the Atacama Cosmology Telescope
