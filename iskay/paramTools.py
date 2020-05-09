@@ -4,6 +4,7 @@ All the action happens in the params object, which receives a filename for
 the .ini file. '''
 
 import ConfigParser
+import numpy as np
 
 
 class params:
@@ -28,13 +29,40 @@ class params:
         self.MASKMAP_FNAME4 = c.get('Map', 'maskmap_fname4')
 
         self.CAT_FNAME = c.get('Catalog', 'catalog_fname')
-        self.CAT_QUERY = c.get('Catalog', 'query')
+
+        query = c.get('Catalog', 'query')
+        self.CAT_QUERY = query
+        if query == '' or query == ' ' or query == 'None':
+            self.CAT_QUERY = None
         self.N_OBJ = c.getint('AnalysisParams', 'n_obj')
         self.PHOTODISKR = c.getfloat('AnalysisParams', 'photodiskr')
         self.PHOTORINGR = c.getfloat('AnalysisParams', 'photoringr')
         self.SIGMA_Z = c.getfloat('AnalysisParams', 'sigma_z')
-        self.BIN_SIZE_MPC = c.getfloat('AnalysisParams', 'bin_size_mpc')
-        self.N_BINS = c.getint('AnalysisParams', 'n_bins')
+
+        #following lines check if binning is constant size or adaptive
+        if c.get('AnalysisParams', 'bin_size_mpc') == 'None':
+            self.BIN_SIZE_MPC = None
+        else:
+            self.BIN_SIZE_MPC = c.getfloat('AnalysisParams', 'bin_size_mpc')
+
+        if c.get('AnalysisParams', 'n_bins') == 'None':
+            self.N_BINS = None
+        else:
+            self.N_BINS = c.getint('AnalysisParams', 'n_bins')
+
+        #adaptive bins
+        if c.get('AnalysisParams', 'bin_edges_mpc') == 'None':
+            self.BIN_EDGES = None
+            self.UNEVEN_BINS = False
+        else:  # separate by comma space: 1, 2, 3
+            bin_edges_str = c.get('AnalysisParams', 'bin_edges_mpc').split(',') # noqa
+            bin_edges = np.array([float(element) for element in bin_edges_str])
+            self.BIN_EDGES = np.sort(bin_edges)
+            self.UNEVEN_BINS = True
+        #check that bins are defined uniformly or unevenly spaced
+        assert (((self.BIN_SIZE_MPC is None) and (self.N_BINS is None))
+                ^ (self.BIN_EDGES is None)) # noqa exclusively one
+
         self.GET_TZAV_FAST = c.getboolean('AnalysisParams', 'get_tzav_fast')
         self.DO_VARIANCE_WEIGHTED = c.getboolean('AnalysisParams',
                                                  'do_variance_weighted')
@@ -75,13 +103,14 @@ def generateDefaultParams():
     c.set('AnalysisParams', 'PhotoDiskR', '2.1')
     c.set('AnalysisParams', 'PhotoRingR', '%s' % (2.1 * 1.4))
     c.set('AnalysisParams', 'Sigma_z', '0.01')
-    c.set('AnalysisParams', 'bin_size_mpc', '10.0')
-    c.set('AnalysisParams', 'n_bins', '40')
+    c.set('AnalysisParams', 'bin_size_mpc', 'None')
+    c.set('AnalysisParams', 'n_bins', 'None')
+    c.set('AnalysisParams', 'bin_edges_mpc', '5, 15, 25, 35, 45')
     c.set('AnalysisParams', 'get_tzav_fast', 'True')
     c.set('AnalysisParams', 'do_variance_weighted', 'False')
 
     c.add_section('JK')
-    c.set('JK', 'n_groups', '50')
+    c.set('JK', 'n_groups', '500')
 
     c.add_section('submap')
     c.set('submap', 'repixelize', 'True')

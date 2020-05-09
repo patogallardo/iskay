@@ -1,6 +1,7 @@
 from scipy import interpolate
 from iskay import weighted_median
 import numpy as np
+from iskay import pairwiser
 
 
 def eval_wiggly_tee(zs, dTs, sigma_z, z_center,
@@ -55,11 +56,18 @@ def correct_tsz_decrement(df, sigma_z, N_in_sigma=10,
     '''Takes dTs from aperture photometry, computes wiggly tee
     for each redshift and substracts wiggly tee.
     Results are appended in df['dT_kSZ']'''
-    zs_to_eval, w_tee, f_wiggly_tee = get_wiggly_tee(df.z.values,
+    if 'gaussian_conventional' not in gaussian_or_square:  # new method
+        print('Applying new wtee correction')
+        zs_to_eval, w_tee, f_wiggly_tee = get_wiggly_tee(df.z.values,
                                                      df.dT.values,
                                                      sigma_z,
                                                      N_in_sigma,
                                                      gaussian_or_square=gaussian_or_square, # noqa
                                                      mean_or_median=mean_or_median) # noqa
-    df['wiggly_tee'] = f_wiggly_tee(df.z.values)
+        df['wiggly_tee'] = f_wiggly_tee(df.z.values)
+    else:  # usual method
+        assert 'gaussian_conventional' in gaussian_or_square
+        print('Applying convetional wiggly tee correction')
+        tzav = pairwiser.get_tzav_fast(df.dT.values, df.z.values, sigma_z)
+        df['wiggly_tee'] = tzav
     df['dT_kSZ'] = df['dT'].values - df['wiggly_tee']

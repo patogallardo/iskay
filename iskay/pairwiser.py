@@ -178,6 +178,14 @@ def vecdiff_jit(d1, d2, angle_rad):
     return r
 
 
+def make_rsep_uneven_bins(bin_edges):
+    '''
+    Generates x axis of the histogram as in make_rsep
+    bin_edges is a numpy array with the edges of the bins.
+    '''
+    return (bin_edges[1:] + bin_edges[:-1])/2.0
+
+
 def make_rsep(nrbin, binsz):
     '''Generates the x axis of the histogram.
     Bin positions are halfway of the step.
@@ -217,20 +225,32 @@ def get_pairwise_ksz(df, params,
 
     ra_deg = df.ra.values
     dec_deg = df.dec.values
-    binsz = params.BIN_SIZE_MPC
-    nbins = params.N_BINS
 
-    if params.DO_VARIANCE_WEIGHTED:
-        print("need to implement this!")
-        div = df.div_disk.values
-        r_sep, p_uk = variance_weighted_pairwise_ksz(Dc, ra_deg, dec_deg,
+    if not params.UNEVEN_BINS:  # uniform bins
+        binsz = params.BIN_SIZE_MPC
+        nbins = params.N_BINS
+    else:  # uneven bins
+        bin_edges = params.BIN_EDGES
+
+    if not params.UNEVEN_BINS:  # uniform bins
+        if params.DO_VARIANCE_WEIGHTED:
+            div = df.div_disk.values
+            r_sep, p_uk = variance_weighted_pairwise_ksz(Dc, ra_deg, dec_deg,
                                                      tzav, dT, div,
                                                      binsz, nbins,
                                     multithreading=multithreading)  # noqa
-    else:
-        r_sep, p_uk = pairwise_ksz(Dc, ra_deg, dec_deg, tzav, dT,
-                                   binsz, nbins,
-                                   multithreading=multithreading)
+        else:
+            r_sep, p_uk = pairwise_ksz(Dc, ra_deg, dec_deg, tzav, dT,
+                                       binsz, nbins,
+                                       multithreading=multithreading)
+    else:  # uneven bins
+        if params.DO_VARIANCE_WEIGHTED:
+            assert False  # not implemented
+        else:
+            r_sep, p_uk = pairwise_ksz_uneven_bins(Dc, ra_deg, dec_deg,
+                                                   tzav, dT,
+                                                   bin_edges,
+                                                   multithreading=multithreading) # noqa
     return r_sep, p_uk
 
 #variance weighted implementation. These funcitons are basically lcones of
@@ -325,3 +345,115 @@ def variance_weighted_pairwise_one_row(row, Dc, ra_rad, dec_rad, tzav,
             sigma_sq = 1.0/divs[i] + 1.0/divs[j]
             dTw[binval_ij] += dT_ij * cij/sigma_sq
             w2[binval_ij] += cij**2./sigma_sq
+
+
+# #### Functions below are for pairwiseit with adaptive bins ####
+
+
+@numba.jit(nopython=True)
+def inWhatBinIsIt(value, bin_edges):
+    '''Receives a number value and a vector of bin edges.
+    Returns the bin number for this value by exhaustively
+    evaluating its location.
+
+    This function requires:
+        1) that bin_edges are sorted and increasing in value
+        2) that value is lower in value than the last bin edge. And greater
+           than the first bin_edge
+    These two conditions must be chequed outside the function.
+
+    inputs:
+        value: number
+        bin_edges: sorted numpy array
+    '''
+    for j in range(len(bin_edges)):
+        if (value > bin_edges[j]) and (value <= bin_edges[j+1]):
+            return j
+    return -10  # if finished, default value
+
+
+@numba.jit(nopython=True, nogil=True)
+def pairwise_one_row_uneven_bins(row, Dc, ra_rad, dec_rad, tzav,
+                                 Tmapsc, bin_edges, dTw, w2):
+    '''This needs dTw and w2 to be numpy arrays of length nrbin.
+        row: what row to compute
+        Dc: distance
+        ra_rad: ra in rad
+        dec_rad: dec in rad
+        tzav: Average T as a function of redshift.
+        Tmapsc: Tdisc - Tring_cmb
+        bin_edges: the edges of the bins (for n bins, we need n+1 edges)
+        dTw: numpy array of size nrbin
+        w2: idem'''
+    many = len(ra_rad)
+    i = row  #same notation as in pairwise_it
+    for j in range(i+1, many):
+        ang_ij = angle_jit_rad(dec_rad[i], ra_rad[i], dec_rad[j], ra_rad[j])
+        vecdiff_ij = vecdiff_jit(Dc[i], Dc[j], ang_ij)
+#       Check if this separation is within the bin space
+        if (vecdiff_ij > bin_edges[0]) and (vecdiff_ij < bin_edges[-1]):
+            binval_ij = inWhatBinIsIt(vecdiff_ij, bin_edges)
+#           Now compute and store
+            dT_ij = (Tmapsc[i] - tzav[i])-(Tmapsc[j]-tzav[j])
+            cij = (Dc[i]-Dc[j])*(1.0 + mt.cos(ang_ij)) / (2*vecdiff_ij)
+            dTw[binval_ij] += dT_ij * cij
+            w2[binval_ij] += cij**2.
+
+
+def pairwise_ksz_uneven_bins(Dc, ra_deg, dec_deg, tzav, Tmapsc,
+                             bin_edges,
+                             multithreading=True,
+                             Nthreads=numba.config.NUMBA_NUM_THREADS):
+    '''Produces the ksz curve for givne arguments.
+        Dc: radial distance
+        ra_deg, dec_deg: ra and dec of the object in degrees
+        tazv: smoothed out redshift dependent temperature
+        Tmapsc: temperature decrement
+        binsz, nrbin: bin size in Mpc and number of separation bins
+        multithreading sets if you want to run in different threads for
+        Nthreads or if you want a gigantic for loop.
+    '''
+    nrbin = len(bin_edges) - 1
+    assert len(Dc) == len(ra_deg) == len(dec_deg) == len(tzav) == len(Tmapsc)
+    length = len(ra_deg)
+
+    ra_rad = np.deg2rad(ra_deg)
+    dec_rad = np.deg2rad(dec_deg)
+
+    dTws = [np.zeros(nrbin) for j in range(length-1)]  #list of results for
+    w2s = [np.zeros(nrbin) for j in range(length-1)]  #each pairwiser row
+
+    rows = xrange(length-1)  # iterate over (n-1) rows for i!=j ...
+    Dcs = itertools.repeat(Dc, length-1)
+    ras_rad = itertools.repeat(ra_rad, length-1)
+    decs_rad = itertools.repeat(dec_rad, length-1)
+    tzavs = itertools.repeat(tzav, length-1)
+    Tmapscs = itertools.repeat(Tmapsc, length-1)
+    bin_edges_s = itertools.repeat(bin_edges, length-1)
+
+    if multithreading:
+        print "Running in %i threads..." % Nthreads
+        with futures.ThreadPoolExecutor(Nthreads) as ex:
+            ex.map(
+                pairwise_one_row_uneven_bins,
+                rows, Dcs, ras_rad, decs_rad, tzavs, Tmapscs,
+                bin_edges_s, dTws, w2s)
+    else:
+        print "Running on only one thread."
+        map(
+            pairwise_one_row_uneven_bins,
+            rows, Dcs, ras_rad, decs_rad, tzavs, Tmapscs,
+            bin_edges_s, dTws, w2s)
+
+    dTws = np.array(dTws)
+    w2s = np.array(w2s)
+
+    dTw = dTws.sum(axis=0)
+    w2 = w2s.sum(axis=0)
+
+    assert not np.any(w2 == 0)
+
+    pest = -dTw/w2
+    rsep = make_rsep_uneven_bins(bin_edges)
+
+    return rsep, pest

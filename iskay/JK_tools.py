@@ -13,11 +13,12 @@ def indicesToDrop(df, Ngroups, randomize=True):
 
     It will return a list of numpy arrays. There will be Ngroups numpy arrays.
     '''
-    indices = df.index.values
-    if randomize:
-        np.random.seed(4)  #to make it predictable
-        np.random.shuffle(indices)
-    return np.array_split(indices, Ngroups)
+    indices = df.index.values.copy()  # if you dont do .copy
+    if randomize:  # the randomizer will give same result
+        np.random.shuffle(indices)  # for diffferent runs
+    groups = np.array_split(indices, Ngroups)  # seems to be
+    return groups  # a weird bug in numpy/pandas, fixed in
+    # later versions
 
 
 def getErrorbars(jk_results, params):
@@ -31,11 +32,37 @@ def getErrorbars(jk_results, params):
 
 
 #covariance matrix
+# supreceded by getBinNamesFromBinEdges
+# ############### this function was dropped in 4/27/2020 to
+# ###############handle uneven bins
 def getBinNames(rsep):
     '''For a given rsep, makes a list of bin names for use with pandas
        dataframe'''
     names = ["0 - %i" % rsep[0]]
     names += ["%i - %i" % (rsep[j], rsep[j+1]) for j in range(len(rsep)-1)]
+    return names
+###################
+
+
+def getBinNamesFromParams(params):
+    if params.UNEVEN_BINS:
+        names = getBinNamesFromBinEdges(params.BIN_EDGES)
+    else:
+        names = getBinNamesFromNbinsBinsize(params.N_BINS,
+                params.BIN_SIZE_MPC) # noqa
+    return names
+
+
+def getBinNamesFromNbinsBinsize(nbins, binsize):
+    bin_edges = np.arange(0, (nbins+1)*binsize)
+    names = getBinNamesFromBinEdges(bin_edges)
+    return names
+
+
+def getBinNamesFromBinEdges(bin_edges):
+    '''For givne bin edges, make labels for these bins.'''
+    names = ["%i - %i" % (bin_edges[j], bin_edges[j+1])
+             for j in range(len(bin_edges)-1)]
     return names
 
 

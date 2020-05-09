@@ -34,7 +34,7 @@ def run_JK_distributed(df, param, randomize=True):
                                     'mkdir -p /tmp/pag227/dask/dask-scratch',
                                     'export NUMBA_NUM_THREADS=%i' % Ncores,
                                     'export OMP_NUM_THREADS=%i' % Ncores
-#                                    'export OMP_NUM_THREADS=1',
+#                                    'export OMP_NUM_THREADS=1',  # noqa
                                     ])
     cluster.scale(NWorkers)
     client = Client(cluster)
@@ -66,6 +66,6 @@ def run_JK_distributed(df, param, randomize=True):
     fullDataset_results = res_fullDataset.result()
     jk_results = client.gather(jk_results)
     client.close()
-    cluster.close()
+#    cluster.close()
 
     return fullDataset_results, jk_results

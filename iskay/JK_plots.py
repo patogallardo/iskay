@@ -26,8 +26,12 @@ def plot_kSZ_curveWithErrorbars(jk, show=True):
 def plotCorrMatrix(jk, show=True):
     '''Receives a jk object. plots correlation matrix.
     '''
-    sns.heatmap(jk.corr)
-    plt.title('Corr matrix %s' % jk.query)
+    sns.heatmap(jk.corr, vmin=-0.2, vmax=1)
+    title = 'Corr matrix %s, %s' % (jk.query, jk.name)
+    if len(title) > 20:
+        title = 'Corr matrix %s' % (jk.name)  # patch for long title
+    plt.title(title)
+
     plt.tight_layout()
     if show:
         plt.show()

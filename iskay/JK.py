@@ -67,7 +67,8 @@ class JK_container():
         jk_results = [jk_results[j][1] for j in range(len(jk_results))]
         jk_results = np.array(jk_results)
         self.rsep = rsep
-        self.bin_names = JK_tools.getBinNames(rsep)
+        self.bin_edges = params.BIN_EDGES
+        self.bin_names = JK_tools.getBinNamesFromBinEdges(params.BIN_EDGES)
         self.kSZ_curveFullDataset = p_uk
         self.kSZ_curveJK_realizations = jk_results
         self.errorbars = getErrorbars(jk_results, params)
