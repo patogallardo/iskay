@@ -9,6 +9,41 @@ from iskay import catalogTools
 import os
 
 
+def test_inWhatBinIsIt():
+    val = 5.4
+    bin_edges = np.array([3, 4, 6, 8, 10, 14, 17.], dtype=float)
+    assert pairwiser.inWhatBinIsIt(val, bin_edges) == 1
+
+
+def test_pairwiser_one_row_uneven_bins():
+    length = 10000
+    row = np.random.randint(0, length)
+    Dc = np.random.uniform(low=100, high=110, size=length)
+    ra_rad = np.random.uniform(low=0, high=2*np.pi, size=length)
+    dec_rad = np.random.uniform(low=-30, high=30, size=length)
+    tzav = np.zeros(length)
+    Tmapsc = np.random.uniform(low=0, high=20, size=length)
+    nrbin = 40
+    binsz = 5
+    bin_edges = np.arange(0, binsz*(nrbin+1.0), binsz)
+    dTw_pairwise_one_row = np.zeros(nrbin)
+    w2_pairwise_one_row = np.zeros(nrbin)
+    dTw_pariwise_one_row_unevenBins = np.zeros(nrbin)
+    w2_pairwise_one_row_unevenBins = np.zeros(nrbin)
+    pairwiser.pairwise_one_row(row, Dc, ra_rad, dec_rad, tzav,
+                               Tmapsc, nrbin, binsz, dTw_pairwise_one_row,
+                               w2_pairwise_one_row)
+    pairwiser.pairwise_one_row_uneven_bins(row, Dc, ra_rad, dec_rad, tzav,
+                                           Tmapsc, bin_edges,
+                                           dTw_pariwise_one_row_unevenBins,
+                                           w2_pairwise_one_row_unevenBins)
+    sum_err_sq1 = np.sum((dTw_pairwise_one_row - # noqa
+                          dTw_pariwise_one_row_unevenBins)**2)
+    sum_err_sq2 = np.sum((w2_pairwise_one_row -  # noqa
+                          w2_pairwise_one_row_unevenBins)**2)
+    assert sum_err_sq1 < 1e-10 and sum_err_sq2 < 1e-10
+
+
 def test_get_tzav():
     size = 1000
     dTs = np.random.uniform(low=0, high=100, size=size)
@@ -111,8 +146,7 @@ def test_pairwiser_ksz():
     Dc = np.random.uniform(low=100, high=110, size=length)
     ra_rad = np.random.uniform(low=0, high=2*np.pi, size=length)
     ra_deg = np.rad2deg(ra_rad)
-    dec_rad = np.random.uniform(low=-30, high=30, size=length)
-    dec_deg = np.rad2deg(dec_rad)
+    dec_deg = np.random.uniform(low=-30, high=30, size=length)
     tzav = np.zeros(length)
     Tmapsc = np.random.uniform(low=0, high=20, size=length)
     nrbin = 40
@@ -265,10 +299,23 @@ def test_get_pairwise_ksz():
     rsep, p_uk = pairwiser.get_pairwise_ksz(df, params, multithreading=False)
 
     tzav = pairwiser.get_tzav(df.dT.values, df.z.values, params.SIGMA_Z)
-    rsep0, p_uk0 = pairwiser.pairwise_ksz(df.Dc.values, df.ra.values,
-                                          df.dec.values, tzav, df.dT.values,
-                                          params.BIN_SIZE_MPC, params.N_BINS,
-                                          multithreading=False)
+
+    if not params.UNEVEN_BINS:
+        rsep0, p_uk0 = pairwiser.pairwise_ksz(df.Dc.values, df.ra.values,
+                                              df.dec.values, tzav,
+                                              df.dT.values,
+                                              params.BIN_SIZE_MPC,
+                                              params.N_BINS,
+                                              multithreading=False)
+    else:
+        rsep0, p_uk0 = pairwiser.pairwise_ksz_uneven_bins(df.Dc.values,
+                                                          df.ra.values,
+                                                          df.dec.values,
+                                                          tzav,
+                                                          df.dT.values,
+                                                          params.BIN_EDGES,
+                                                          multithreading=False)
+
     rsep_diff_sq = np.sum((rsep - rsep0)**2)
     p_uk_diff_sq = np.sum((p_uk - p_uk0)**2)
     assert rsep_diff_sq < 1e-10
@@ -308,3 +355,38 @@ def test_varianceWeighted():
                                           multithreading=False)
     chisq = np.sum((p_uk - p_uk0)**2)
     assert chisq < 1.0e10
+
+
+def test_make_rsep_uneven_bins():
+    bin_edges = np.array([5, 15, 25, 35, 45, 70, 90])
+    bins = pairwiser.make_rsep_uneven_bins(bin_edges)
+    bins_tocompare = np.array([10, 20, 30, 40, 57.5, 80])
+    chisq = np.sum((bins-bins_tocompare)**2)
+    assert chisq < 1e-10
+
+
+def test_pairwiser_ksz_uneven_bins():
+    length = 10000
+    Dc = np.random.uniform(low=100, high=110, size=length)
+    ra_rad = np.random.uniform(low=0, high=2*np.pi, size=length)
+    ra_deg = np.rad2deg(ra_rad)
+    dec_deg = np.random.uniform(low=-30, high=30, size=length)
+    tzav = np.zeros(length)
+    Tmapsc = np.random.uniform(low=0, high=20, size=length)
+    nrbin = 40
+    binsz = 5
+    bin_edges = np.arange(0, binsz*(nrbin+1.0), binsz)
+
+    rsep, pest = pairwiser.pairwise_ksz(Dc, ra_deg, dec_deg, tzav,
+                                        Tmapsc, binsz, nrbin,
+                                        multithreading=False)
+
+    rsep_uneven, pest_uneven = pairwiser.pairwise_ksz_uneven_bins(Dc, ra_deg,
+                                                    dec_deg,  # noqa
+                                                   tzav, Tmapsc, # noqa
+                                                   bin_edges, # noqa
+                                                   multithreading=False) # noqa
+    diff_sq = (pest - pest_uneven)**2
+    assert np.sum(diff_sq) < 1e-10
+    diff_sq = (rsep-rsep_uneven)**2
+    assert np.sum(diff_sq) < 1e-10
