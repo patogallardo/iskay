@@ -41,13 +41,16 @@ def splitCatalog(fname, howManyGroups, chunk):
 
 
 def saveResult(thisChunk, T_disk, T_ring, div_disk, Dc, chunkNumber,
-               mask=None):
+               masks=[None, None, None, None]):
     '''Adds two new columns to this chunk and uses pandas to save the
     resulting dataframe
     thisChunk: pandas dataframe with the original catalog without the ap
                photometry results
     T_dis, T_ring: vectors with the results from ap photo.
-    chunkNumber: what chunk is this?'''
+    chunkNumber: what chunk is this?
+    masks: list that contains none if no info is to be included from mask
+           otherwise it contains the numpy array with the masked disk
+           photometry'''
     resultsFolder = 'ApPhotoResults'
     thisChunk['T_disk'] = T_disk
     thisChunk['T_ring'] = T_ring
@@ -60,11 +63,12 @@ def saveResult(thisChunk, T_disk, T_ring, div_disk, Dc, chunkNumber,
     print(thisChunk.head())
     print(thisChunk.tail())
 
-    if mask is not None:
-        thisChunk['masked'] = mask
-    else:
-        thisChunk['masked'] = np.nan
-
+    for j in range(len(masks)):
+        mask = masks[j]
+        if mask is not None:
+            thisChunk['masked_%i' % j] = mask
+        else:
+            thisChunk['masked_%i' % j] = np.nan
     print "debug data in saveResult (after adding cols)"
     print(thisChunk.head())
     print(thisChunk.tail())
@@ -83,7 +87,12 @@ def extractApPhotometry(params, thisChunk, mapOrDiv='map'):
     getApPhotometryForCatalogPositions'''
     mapfname = {'map': params.FITS_FNAME,
                 'div': params.DIVMAP_FNAME,
-                'mask': params.MASKMAP_FNAME}[mapOrDiv]
+                'mask1': params.MASKMAP_FNAME1,
+                'mask2': params.MASKMAP_FNAME2,
+                'mask3': params.MASKMAP_FNAME3,
+                'mask4': params.MASKMAP_FNAME4}[mapOrDiv]
+    if 'mask' in mapOrDiv:
+        mapOrDiv = 'mask'  # all params for masks are the same
     repixelize = {'map': params.REPIXELIZE,
                   'div': False,
                   'mask': False}[mapOrDiv]
@@ -92,10 +101,10 @@ def extractApPhotometry(params, thisChunk, mapOrDiv='map'):
                  'mask': False}[mapOrDiv]
     photoDiskR = {'map': params.PHOTODISKR,
                   'div': params.PHOTORINGR,
-                  'mask': params.PHOTORINGR}[mapOrDiv]
+                  'mask': params.PHOTORINGR*1.4}[mapOrDiv]
     photoRingR = {'map': params.PHOTORINGR,
                   'div': params.PHOTORINGR*1.4,
-                  'mask': params.PHOTORINGR*1.4}[mapOrDiv]
+                  'mask': params.PHOTORINGR*1.4*1.4}[mapOrDiv]
 
     theMap = mapTools.openMap_remote(fname=mapfname)
     ras_deg, decs_deg = thisChunk['ra'].values, thisChunk['dec'].values
@@ -124,11 +133,29 @@ T_disk, T_ring = extractApPhotometry(params, thisChunk, mapOrDiv='map')
 print "Done extracting the map, loading the divmap now..."
 div_disk, div_ring = extractApPhotometry(params, thisChunk, mapOrDiv='div')
 
-mask_disk = None
-if '.fits' in params.MASKMAP_FNAME:
-    print('Done extracting the divmap, loading the mask now')
-    mask_disk, mask_ring = extractApPhotometry(params,
-                                               thisChunk, mapOrDiv='mask')
+
+mask_disk1 = None
+if '.fits' in params.MASKMAP_FNAME1:
+    print('Loading mask1 now')
+    mask_disk1, mask_ring1 = extractApPhotometry(params,
+                                                 thisChunk, mapOrDiv='mask1')
+mask_disk2 = None
+if '.fits' in params.MASKMAP_FNAME2:
+    print('Loading mask2 now')
+    mask_disk2, mask_ring2 = extractApPhotometry(params,
+                                                 thisChunk, mapOrDiv='mask2')
+mask_disk3 = None
+if '.fits' in params.MASKMAP_FNAME3:
+    print('Loading mask3 now')
+    mask_disk3, mask_ring3 = extractApPhotometry(params,
+                                                 thisChunk, mapOrDiv='mask3')
+mask_disk4 = None
+if '.fits' in params.MASKMAP_FNAME4:
+    print('Loading mask4 now')
+    mask_disk4, mask_ring4 = extractApPhotometry(params,
+                                                 thisChunk, mapOrDiv='mask4')
+masks = [mask_disk1, mask_disk2, mask_disk3, mask_disk4]
+
 Dc = cosmology.Dc(thisChunk.z.values)
 saveResult(thisChunk, T_disk, T_ring, div_disk, Dc, chunkNumber,
-           mask=mask_disk)
+           masks=masks)

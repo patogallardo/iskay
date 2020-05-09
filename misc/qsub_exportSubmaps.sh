@@ -11,3 +11,5 @@
 export MKL_NUM_THREADS=12
 export OMP_NUM_THREADS=12
 /nfs/user/pag227/miniconda/bin/python /home/pag227/code/iskay/misc/iskay_exportSubmaps.py submaps
+/nfs/user/pag227/miniconda/bin/python /home/pag227/code/iskay/misc/iskay_exportSubmaps.py divmaps
+
