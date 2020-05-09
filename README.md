@@ -1,4 +1,5 @@
-# iskay: an estimator of the pairwise kinetic sunyaev-zeldovich effect.
+# iskay: 
+## an estimator of the pairwise kinetic sunyaev-zeldovich effect.
 
 ![alt text](https://raw.githubusercontent.com/patogallardo/iskay/master/imgs/cover.PNG "ksz diagram")
 
