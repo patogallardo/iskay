@@ -42,7 +42,7 @@ This is the heavy part of the calculation. It was implemented using Dask to spli
 
 ### Results
 
-Results are stored in a pickle object. The pickle object is called a 'JK' which has all the variables of interest. Like: the ksz curve, the separation bins, all the jk replicants, the covariance matrix, the errorbars.
+Results are stored in a pickle object. The pickle object is called a 'JK' which has all the variables of interest. Like: the ksz curve, the separation bins, all the jk replicants, the covariance matrix, the errorbars. For more detail on what variables are stored, see iskay/JK.py and iskay/JK_tools.py.
 
 ## Tests
 
