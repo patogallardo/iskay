@@ -18,6 +18,7 @@ Steps are:
 
 ## Usage
 In bash run 
+
 	runKcorrection.sh path/to/catalog.csv
 The directory "output" now has your kcorrected luminosity catalog. To make plots run plot_hist.py /path/to/kcorrectedcatalog.csv, then directory output will show something like:
 
