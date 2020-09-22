@@ -19,7 +19,9 @@ Steps are:
 4. Convert to absolute magnitudes and convert to luminosities.
 
 ## Usage
-In bash run runKcorrection.sh
+In bash run runKcorrection.sh path/to/catalog.csv. Directory output now has your kcorrected luminosity catalog. To make plots run plot_hist.py /path/to/kcorrectedcatalog.csv, then directory output will show something like:
+
+
 
 ## Author
 Written by P. Gallardo Sept 2020.
