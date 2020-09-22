@@ -24,4 +24,4 @@ In bash run runKcorrection.sh path/to/catalog.csv. Directory output now has your
 
 
 ## Author
-Written by P. Gallardo Sept 2020.
+Written by P. Gallardo Sept 2020 with input from V. Calafut and F. de Bernardis.
