@@ -5,4 +5,3 @@ cat ./output/fitted_coeffs.dat | reconstruct_maggies --band-shift 0.1 --redshift
 python AbsMag.py $1
 rm ./output/maggies.txt ./output/fitted_coeffs.dat ./output/X1.dat
 rm ./output/X2.dat
-python plot_hist.py $1
