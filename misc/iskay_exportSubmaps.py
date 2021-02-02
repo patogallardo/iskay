@@ -37,6 +37,12 @@ def extractStamp(submap, ra_deg, dec_deg, r_ring_arcmin, repixelize=True,
                                                   ra_deg, dec_deg,
                                                   2*r_ring_arcmin,
                                                   0.5/5.)[0, :, :]
+    else:  # this was added for backwards compatibility
+        assert len(extractedSubmap.shape) == 2
+        extractedSubmap = submapTools.getSubmap_originalPixelization(
+                                theMap=extractedSubmap, # noqa
+                                ra_deg=ra_deg, dec_deg=dec_deg, # noqa
+                                semiWidth_deg=r_ring_arcmin/60.) # noqa
     return extractedSubmap
 
 
@@ -57,7 +63,8 @@ def writeSubapsToFile(theMap, df,
                                          4.0*photoringR_arcmin/60.)  # noqa
     sampleStamp = extractStamp(submap, ras_deg[0], decs_deg[0],
                                submapSemiWidthR_arcmin,
-                               repixelize=True, reprojection=True)
+                               repixelize=params.REPIXELIZE,
+                               reprojection=params.REPROJECT)
     shape = sampleStamp.shape
 
     outputDir = '/tmp/pag227/ApPhotoResults'
@@ -79,12 +86,14 @@ def writeSubapsToFile(theMap, df,
                                       max_value=howMany)
         bar.start()
     for j in xrange(howMany):
+        print j
         ra, dec = ras_deg[j], decs_deg[j]
         submap = submapTools.getSubmap_originalPixelization(theMap,
                                                         ra, dec,
                                               4*photoringR_arcmin/60.)  # noqa
         stamp = extractStamp(submap, ra, dec, submapSemiWidthR_arcmin,
-                             repixelize=True, reprojection=True)
+                             repixelize=params.REPIXELIZE,
+                             reprojection=params.REPROJECT)
         dset[j, :, :] = np.array(stamp)
         if verbose:
             bar.update(j+1)

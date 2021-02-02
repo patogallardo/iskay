@@ -37,10 +37,10 @@ def qsubCommand(chunkSize, chunkNumber):
 #    cmd.append('-o /dev/null')
 #    cmd.append('-e /dev/null')
     cmd.append("-a %s" % T.strftime('%Y%m%d%H%M.%S'))
-    cmd.append("-o /home/pag227/sge_logs/sge_%i.out" % chunkNumber)
-    cmd.append("-e /home/pag227/sge_logs/sge_%i.err" % chunkNumber)
+    cmd.append("-o /tmp/pag227_sge_%i.out" % chunkNumber)
+    cmd.append("-e /tmp/pag227_sge_%i.err" % chunkNumber)
     cmd.append("-cwd -V -l")
-    cmd.append("h_rt=24:00:00")
+    cmd.append("h_rt=48:00:00")
     cmd.append("/nfs/user/pag227/miniconda/bin/python")
     cmd.append("/home/pag227/code/iskay/misc/"
                "iskay_AperturePhotomertyPreprocOneChunk.py")

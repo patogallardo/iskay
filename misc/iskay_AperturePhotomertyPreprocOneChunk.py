@@ -130,8 +130,13 @@ thisChunk = splitCatalog(fname=params.CAT_FNAME,
                          chunk=chunkNumber)
 
 T_disk, T_ring = extractApPhotometry(params, thisChunk, mapOrDiv='map')
-print "Done extracting the map, loading the divmap now..."
-div_disk, div_ring = extractApPhotometry(params, thisChunk, mapOrDiv='div')
+print "Done extracting the map."
+if params.DIVMAP_FNAME != 'None':
+    print("Loading the divmap now")
+    div_disk, div_ring = extractApPhotometry(params, thisChunk, mapOrDiv='div')
+else:
+    print("Skipping divmap extraction, divamp fits name is None")
+    div_disk, div_ring = np.zeros(len(T_disk)), np.zeros(len(T_ring))
 
 
 mask_disk1 = None
