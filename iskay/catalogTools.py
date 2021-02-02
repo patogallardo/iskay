@@ -28,6 +28,17 @@ class cat(object):
 
         self.fname_fullpath = fname_fullpath
         df = pd.read_csv(fname_fullpath, comment='#')
+
+        # patch added on 20200602 to conform to rad, decd, zd, lumd naming
+        # of columns
+        if 'rad' in df.columns:
+            df.rename(columns={'rad': 'ra',
+                               'decd': 'dec',
+                               'lumd': 'lum',
+                               'zd': 'z',
+                               'idd': 'id'}, inplace=True)
+            print("renamed cols")
+
         #apply query
         if query is not None:
             df.query(query, inplace=True)

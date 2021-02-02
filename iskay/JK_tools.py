@@ -22,13 +22,24 @@ def indicesToDrop(df, Ngroups, randomize=True):
 
 
 def getErrorbars(jk_results, params):
-    '''Computes jk errorbars from jk realizations '''
+    '''Computes jk errorbars from jk realizations
+    Jun 2020: added support for bootstrap realizations'''
     assert params.JK_NGROUPS == jk_results.shape[0]
     sigma = np.std(jk_results, axis=0)
     sigma_sq = sigma**2
     errorbars_sq = (params.JK_NGROUPS-1) * sigma_sq
-    errorbars = np.sqrt(errorbars_sq)
-    return errorbars
+    JK_errorbars = np.sqrt(errorbars_sq)
+
+    if 'jk' in params.JK_RESAMPLING_METHOD.lower():
+        return JK_errorbars
+    elif 'bootstrap' in params.JK_RESAMPLING_METHOD.lower():
+        return sigma
+    elif 'bs_pairwise' in params.JK_RESAMPLING_METHOD.lower():
+        return sigma
+    elif 'bs_dt' in params.JK_RESAMPLING_METHOD.lower():
+        return sigma
+    else:
+        assert False  # resampling error.
 
 
 #covariance matrix
@@ -66,16 +77,38 @@ def getBinNamesFromBinEdges(bin_edges):
     return names
 
 
-def getCovMatrix(bin_names, pests):
+def getCovMatrix(bin_names, pests, params):
     '''Uses pandas to get the covariance matrix of pests.
     bin_names are the names of the columns of pests.
     This assumes the pests vector was generated in a JK run,
     and uses the number of realizations to inflate the variances'''
     N = pests.shape[0]
     df = pd.DataFrame(pests, columns=bin_names)
-    cov = df.cov() * (N-1) / N * (N-1)  # first term cancels N-1 from numpy
+    if 'jk' in params.JK_RESAMPLING_METHOD.lower():
+        cov = df.cov() * (N-1.) / N * (N-1.)  # first term cancels N-1 from np
+    elif 'bootstrap' in params.JK_RESAMPLING_METHOD.lower():
+        cov = df.cov()
+    elif 'bs_pairwise' in params.JK_RESAMPLING_METHOD.lower():
+        cov = df.cov()
+    elif 'bs_dt' in params.JK_RESAMPLING_METHOD.lower():
+        cov = df.cov()
     return cov  # covariance. Second term replaces it by N, third term
 #               #  compensates JK covariance.
+
+
+def getJointCovMatrix(bin_names, pests1, pests2, params):
+    assert pests1.shape[0] == pests2.shape[0]
+    N = pests1.shape[0]
+
+    df1 = pd.DataFrame(pests1, columns=bin_names)
+    df2 = pd.DataFrame(pests2, columns=bin_names)
+    df_joint = pd.concat([df1, df2], axis=1)
+
+    if 'jk' in params.JK_RESAMPLING_METHOD.lower():
+        cov = df_joint.cov() * (N-1.) / N * (N-1.)
+    elif 'bootstrap' in params.JK_RESAMPLING_METHOD.lower():
+        cov = df_joint.cov()
+    return cov
 
 
 def getCorrMatrix(bin_names, pests):

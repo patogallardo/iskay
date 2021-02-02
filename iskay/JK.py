@@ -21,9 +21,20 @@ def JK(df, params, distributed):
 
 def save_JK(jk_object):
     '''This pickles the entire JK structure.'''
-    if not os.path.exists('results'):
-        os.mkdir('results')
-    fnameOut = os.path.join('./results/',
+    if jk_object.params.JK_RESAMPLING_METHOD.lower() == 'jk':
+        output_dir = 'results_jk'
+    elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'bootstrap':
+        output_dir = 'results_bs'
+    elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'bootstrap_pairwise':
+        output_dir = 'results_bs_pairwise'
+    elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'bs_dt':
+        output_dir = 'results_bsdt'
+    else:
+        assert False  # unknown resampling method
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+
+    fnameOut = os.path.join('./%s' % output_dir,
                             jk_object.params.NAME + '.pck')
     with open(fnameOut, 'w') as f:
         pickle.dump(jk_object, f)
@@ -47,7 +58,8 @@ class JK_container():
         self.JK_Ngroups = params.JK_NGROUPS
         self.runJK(df, self.params, distributed)
         self.cov = JK_tools.getCovMatrix(self.bin_names,
-                                         self.kSZ_curveJK_realizations)
+                                         self.kSZ_curveJK_realizations,
+                                         params)
         self.corr = JK_tools.getCorrMatrix(self.bin_names,
                                            self.kSZ_curveJK_realizations)
 

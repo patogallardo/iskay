@@ -5,10 +5,17 @@ Written by P. Gallardo
 '''
 from iskay import envVars
 from iskay import pairwiser
+from iskay import bootstrap_pairwise as bs_pw
 from dask.distributed import Client  #, progress
 from dask_jobqueue import SGECluster
 from iskay import JK_tools
 import time
+import numpy as np
+
+JK = 'jk'
+BS = 'bootstrap'
+BS_PW = 'bootstrap_pairwise'
+BS_DT = 'bs_dt'
 
 
 def run_JK_distributed(df, param, randomize=True):
@@ -26,6 +33,7 @@ def run_JK_distributed(df, param, randomize=True):
     Ncores = envVars.Ncores
     NWorkers = envVars.NWorkers
     Ngroups = param.JK_NGROUPS
+    resampling_method = param.JK_RESAMPLING_METHOD.lower()
 
     #setup cluster
     cluster = SGECluster(walltime='172800', processes=1, cores=1,
@@ -50,18 +58,46 @@ def run_JK_distributed(df, param, randomize=True):
     #done with the full dataset
 
     #iterate over partial dataset for the JK
-    indices_toDrop = JK_tools.indicesToDrop(df, Ngroups, randomize=randomize)
-    futureData = []  #data to be sent
-    for j in range(Ngroups):  # submit data to the cluster
-        dataJK = df.drop(indices_toDrop[j], inplace=False)
-        futureData.append(client.scatter(dataJK))
-
-    #Now do the JK calculation
+    if JK == resampling_method:
+        indices_toDrop = JK_tools.indicesToDrop(df, Ngroups,
+                                                randomize=randomize)
     jk_results = []
-    for j in range(Ngroups):
-        jk_results.append(client.submit(pairwiser.get_pairwise_ksz,
-                          futureData[j],
-                          future_params, multithreading=True))
+    futureData = []  #data to be sent in jk or bootstrap in galaxy space
+
+    if (JK == resampling_method) or (BS == resampling_method):
+        for j in range(Ngroups):  # submit data to the cluster
+            if JK in resampling_method:  # if method jk
+                dataJK = df.drop(indices_toDrop[j], inplace=False)
+                futureData.append(client.scatter(dataJK))
+            elif BS in resampling_method:
+                dataBS = df.sample(len(df), replace=True)
+                futureData.append(client.scatter(dataBS))
+        #Now do the JK calculation
+        for j in range(Ngroups):
+            jk_results.append(client.submit(pairwiser.get_pairwise_ksz,
+                              futureData[j],
+                              future_params, multithreading=True))
+
+    if BS_PW == resampling_method:  # submit the same dataset
+        futureData = client.scatter(df, broadcast=True)
+
+        for j in range(Ngroups):
+            jk_results.append(client.submit(bs_pw.get_bootstrap_pairwise,
+                                            futureData,
+                                            future_params,
+                                            multithreading=True,
+                                            pure=False))
+    if resampling_method == BS_DT:
+        for j in range(Ngroups):
+            df_bs = df.copy()
+            choose = np.random.choice(len(df), len(df))
+            df_bs['dT'] = df.dT.values[choose]
+            futureData.append(client.scatter(df_bs))
+        for j in range(Ngroups):
+            jk_results.append(client.submit(pairwiser.get_pairwise_ksz,
+                                            futureData[j],
+                                            future_params,
+                                            multithreading=True))
     #extract results
     fullDataset_results = res_fullDataset.result()
     jk_results = client.gather(jk_results)

@@ -26,8 +26,8 @@ def getApPhotometryForCatalogPositions(theMap, ras_deg, decs_deg,
     assert len(ras_deg) == len(decs_deg)
     howMany = len(ras_deg)
     T_disks, T_rings = np.empty(ras_deg.shape), np.empty(decs_deg.shape)
-    semiWidth_deg = 4.0 * r_ring_arcmin/60.
-
+    semiWidth_deg = 15.0 * r_ring_arcmin/60.  # sources to the pole will
+    # excercise this more, should change this in the future
     if not silent:
         widgets = [progressbar.Percentage(), progressbar.Bar(),
                    progressbar.ETA()]

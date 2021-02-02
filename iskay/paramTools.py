@@ -67,6 +67,12 @@ class params:
         self.DO_VARIANCE_WEIGHTED = c.getboolean('AnalysisParams',
                                                  'do_variance_weighted')
         self.JK_NGROUPS = c.getint('JK', 'n_groups')
+        self.JK_RESAMPLING_METHOD = c.get('JK', 'resampling_method')
+        assert self.JK_RESAMPLING_METHOD in ['JK', 'BOOTSTRAP',
+                                             'jk', 'bootstrap',
+                                             'bootstrap_pairwise',
+                                             'bs_dt']
+
         self.REPIXELIZE = c.getboolean('submap', 'repixelize')
         self.REPROJECT = c.getboolean('submap', 'reproject')
 
@@ -105,12 +111,15 @@ def generateDefaultParams():
     c.set('AnalysisParams', 'Sigma_z', '0.01')
     c.set('AnalysisParams', 'bin_size_mpc', 'None')
     c.set('AnalysisParams', 'n_bins', 'None')
-    c.set('AnalysisParams', 'bin_edges_mpc', '5, 15, 25, 35, 45')
+    c.set('AnalysisParams', 'bin_edges_mpc', '0.0, 10.0, 20.0, 30.0, 40.0, '
+          '50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, '
+          '150.0, 200.0, 250.0, 315.0, 395.0')
     c.set('AnalysisParams', 'get_tzav_fast', 'True')
     c.set('AnalysisParams', 'do_variance_weighted', 'False')
 
     c.add_section('JK')
     c.set('JK', 'n_groups', '500')
+    c.set('JK', 'resampling_method', 'JK')
 
     c.add_section('submap')
     c.set('submap', 'repixelize', 'True')
