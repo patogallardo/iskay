@@ -6,6 +6,7 @@ Written by P. Gallardo
 from iskay import envVars
 from iskay import pairwiser
 from iskay import bootstrap_pairwise as bs_pw
+from iskay import tiled_JK
 from dask.distributed import Client  #, progress
 from dask_jobqueue import SGECluster
 from iskay import JK_tools
@@ -13,6 +14,7 @@ import time
 import numpy as np
 
 JK = 'jk'
+TL_JK = 'tiled_jk'
 BS = 'bootstrap'
 BS_PW = 'bootstrap_pairwise'
 BS_DT = 'bs_dt'
@@ -46,7 +48,7 @@ def run_JK_distributed(df, param, randomize=True):
                                     ])
     cluster.scale(NWorkers)
     client = Client(cluster)
-    time.sleep(10)
+    time.sleep(30)
     #end setting up cluster
 
     #send full dataset to the cluster
@@ -94,6 +96,19 @@ def run_JK_distributed(df, param, randomize=True):
             df_bs['dT'] = df.dT.values[choose]
             futureData.append(client.scatter(df_bs))
         for j in range(Ngroups):
+            jk_results.append(client.submit(pairwiser.get_pairwise_ksz,
+                                            futureData[j],
+                                            future_params,
+                                            multithreading=True))
+
+    if resampling_method == TL_JK:
+        tiled_JK.classify_grid(df)
+        df = tiled_JK.remove_edge_galaxies(df, tol_sigma=1.5)
+        Ntiles = tiled_JK.how_many_tiles(df)
+        for j in range(Ntiles):
+            df_tosubmit = tiled_JK.remove_tile(df, j)
+            futureData.append(client.scatter(df_tosubmit))
+        for j in range(Ntiles):
             jk_results.append(client.submit(pairwiser.get_pairwise_ksz,
                                             futureData[j],
                                             future_params,

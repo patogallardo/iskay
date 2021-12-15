@@ -11,6 +11,7 @@ from iskay.JK_tools import getErrorbars
 import pickle
 import time
 import os
+from pairwiser_massboosted import run_JK_distributed_massboosted
 
 
 def JK(df, params, distributed):
@@ -29,6 +30,12 @@ def save_JK(jk_object):
         output_dir = 'results_bs_pairwise'
     elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'bs_dt':
         output_dir = 'results_bsdt'
+    elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'tiled_jk':
+        output_dir = 'results_tiled_jk'
+    elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'bs_dt_mass_boosted_est':  # noqa
+        output_dir = 'results_bsdt_mass_boosted_est'
+    elif jk_object.params.JK_RESAMPLING_METHOD.lower() == 'bs_dt_mass_boosted_est_debiased':  # noqa
+        output_dir = 'results_bsdt_mass_boosted_est_debiased'
     else:
         assert False  # unknown resampling method
     if not os.path.exists(output_dir):
@@ -57,6 +64,8 @@ class JK_container():
         self.N_objects_in_this_run = len(df)
         self.JK_Ngroups = params.JK_NGROUPS
         self.runJK(df, self.params, distributed)
+        if 'tiled' in self.params.JK_RESAMPLING_METHOD:
+            self.JK_Ngroups = self.kSZ_curveJK_realizations.shape[0]
         self.cov = JK_tools.getCovMatrix(self.bin_names,
                                          self.kSZ_curveJK_realizations,
                                          params)
@@ -66,8 +75,14 @@ class JK_container():
     def runJK(self, df, params, distributed):
         t1 = time.time()
         if distributed is True:
-            res = distributed_JK_kSZ.run_JK_distributed(df, params,
-                                                        randomize=True)
+            resampling_method = params.JK_RESAMPLING_METHOD.lower()
+            do_massboosted = resampling_method == 'bs_dt_mass_boosted_est'
+            do_massboosted_debiased = resampling_method == 'bs_dt_mass_boosted_est_debiased'  # noqa
+            if do_massboosted or do_massboosted_debiased:
+                res = run_JK_distributed_massboosted(df, params)  # noqa
+            else:
+                res = distributed_JK_kSZ.run_JK_distributed(df, params,
+                                                            randomize=True)
         else:
             res = singleMachine_JK_kSZ.run_JK_local(df, params,
                                                     randomize=True)
@@ -78,6 +93,7 @@ class JK_container():
 
         jk_results = [jk_results[j][1] for j in range(len(jk_results))]
         jk_results = np.array(jk_results)
+
         self.rsep = rsep
         self.bin_edges = params.BIN_EDGES
         self.bin_names = JK_tools.getBinNamesFromBinEdges(params.BIN_EDGES)

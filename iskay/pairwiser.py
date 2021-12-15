@@ -382,7 +382,8 @@ def variance_wighted_pairwise_one_row_uneven_bins(row, Dc, ra_rad, dec_rad,
 #           Now compute and store
             dT_ij = (Tmapsc[i] - tzav[i])-(Tmapsc[j]-tzav[j])
             cij = (Dc[i]-Dc[j])*(1.0 + mt.cos(ang_ij)) / (2.0*vecdiff_ij)
-            sigma_sq = 1.0/divs[i] + 1.0/divs[j]
+            #sigma_sq = 1.0/divs[i] + 1.0/divs[j] # div
+            sigma_sq = 1/((divs[i] + divs[j])/2)  # use this for mass weights
             dTw[binval_ij] += dT_ij * cij/sigma_sq
             w2[binval_ij] += cij**2./sigma_sq
 

@@ -4,6 +4,63 @@ import numpy as np
 from pixell import enmap
 from pixell import reproject
 import progressbar
+from iskay import cosmology
+
+
+#  This was added on 20210403 during peer review
+def getApPhotometryForCatalogPositions_varyingAperture(theMap, ras_deg,
+                                                       decs_deg, zs,
+                                                       repixelize=False,
+                                                       reprojection=False,
+                                                       submapsFilename=None,
+                                                       indices=None,
+                                                       silent=True):
+    '''Does the same as getApPhotometryForCatalogPositions, but it allows
+    for a varying aperture photometry radius:
+        theMap: enmap object
+        ras_deg: ra in deg
+        decs_deg: dec in deg
+        zs: redshifts
+        f_rdisk_arcmin: function to apply to z, which returns the radius in
+                        arcmin f(z) for each z in zs.
+        repixelize, reprojection, submapsFilename, indices, silent all are
+        identical to getApPhotometryForCatalogPositions.
+    '''
+    cosmo_interpolator = cosmology.mk_varying_ap_photo_interpolator()
+
+    def f_rdisk_arcmin(z):
+        f_interp = cosmo_interpolator
+        r_disk = cosmology.ap_photo_of_z(f_interp, z)
+        return r_disk
+
+    assert len(ras_deg) == len(decs_deg) == len(zs)
+    howMany = len(ras_deg)
+    T_disks, T_rings = np.empty(ras_deg.shape), np.empty(decs_deg.shape)
+
+    if not silent:
+        widgets = [progressbar.Percentage(), progressbar.Bar(),
+                   progressbar.ETA()]
+        bar = progressbar.ProgressBar(widgets=widgets,
+                                      max_value=howMany).start()
+
+    for j in xrange(howMany):
+        ra_deg, dec_deg, z = ras_deg[j], decs_deg[j], zs[j]
+        r_disk_arcmin = f_rdisk_arcmin(z)
+        r_ring_arcmin = f_rdisk_arcmin(z) * 1.4
+        semiWidth_deg = 15.0 * r_ring_arcmin/60.
+        submap = getSubmap_originalPixelization(theMap, ra_deg, dec_deg,
+                                                semiWidth_deg)
+        T_disks[j], T_rings[j] = get_aperturePhotometry(submap,
+                                                        ra_deg, dec_deg,
+                                                        r_ring_arcmin,
+                                                        r_disk_arcmin,
+                                                        repixelize=repixelize,
+                                    reprojection=reprojection)  # noqa
+        if not silent:
+            bar.update(j+1)
+    if not silent:
+        bar.finish()
+    return T_disks, T_rings
 
 
 #make a test for this
@@ -74,10 +131,14 @@ def get_aperturePhotometry(submap, ra_deg, dec_deg,
         submapForPhotometry = enmap.resample(submapForPhotometry,
                                              10*np.array(submap.shape))
     if reprojection:
-        submapForPhotometry = reproject.postage_stamp(submapForPhotometry,
-                                                      ra_deg, dec_deg,
-                                                      3.0*r_ring_arcmin,
-                                                      0.5/10.)[0, :, :]
+        try:
+            submapForPhotometry = reproject.postage_stamp(submapForPhotometry,
+                                                          ra_deg, dec_deg,
+                                                          3.0*r_ring_arcmin,
+                                                          0.5/10.)[0, :, :]
+        except:  # noqa
+            T_disk, T_ring = np.nan, np.nan
+            return 0, 0
     r_arcmin = 60. * np.rad2deg(submapForPhotometry.modrmap())
     sel_disk = r_arcmin < r_disk_arcmin
     sel_ring = np.logical_and(r_arcmin > r_disk_arcmin,

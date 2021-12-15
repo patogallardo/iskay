@@ -24,19 +24,24 @@ def indicesToDrop(df, Ngroups, randomize=True):
 def getErrorbars(jk_results, params):
     '''Computes jk errorbars from jk realizations
     Jun 2020: added support for bootstrap realizations'''
-    assert params.JK_NGROUPS == jk_results.shape[0]
+#    assert params.JK_NGROUPS == jk_results.shape[0] and not IS_TILEDJK
     sigma = np.std(jk_results, axis=0)
     sigma_sq = sigma**2
     errorbars_sq = (params.JK_NGROUPS-1) * sigma_sq
     JK_errorbars = np.sqrt(errorbars_sq)
 
-    if 'jk' in params.JK_RESAMPLING_METHOD.lower():
+    if 'jk' == params.JK_RESAMPLING_METHOD.lower():
         return JK_errorbars
     elif 'bootstrap' in params.JK_RESAMPLING_METHOD.lower():
         return sigma
     elif 'bs_pairwise' in params.JK_RESAMPLING_METHOD.lower():
         return sigma
     elif 'bs_dt' in params.JK_RESAMPLING_METHOD.lower():
+        return sigma
+    elif 'tiled_jk' in params.JK_RESAMPLING_METHOD.lower():
+        NGroups = jk_results.shape[0]
+        errorbars_sq = NGroups * sigma_sq
+        sigma = np.sqrt(errorbars_sq)
         return sigma
     else:
         assert False  # resampling error.
@@ -84,8 +89,11 @@ def getCovMatrix(bin_names, pests, params):
     and uses the number of realizations to inflate the variances'''
     N = pests.shape[0]
     df = pd.DataFrame(pests, columns=bin_names)
-    if 'jk' in params.JK_RESAMPLING_METHOD.lower():
+    if 'jk' == params.JK_RESAMPLING_METHOD.lower():
         cov = df.cov() * (N-1.) / N * (N-1.)  # first term cancels N-1 from np
+    if 'tiled_jk' == params.JK_RESAMPLING_METHOD.lower():
+        N_groups = pests.shape[0]
+        cov = df.cov() * (N_groups-1.)/N_groups * (N_groups-1.)
     elif 'bootstrap' in params.JK_RESAMPLING_METHOD.lower():
         cov = df.cov()
     elif 'bs_pairwise' in params.JK_RESAMPLING_METHOD.lower():
@@ -104,7 +112,7 @@ def getJointCovMatrix(bin_names, pests1, pests2, params):
     df2 = pd.DataFrame(pests2, columns=bin_names)
     df_joint = pd.concat([df1, df2], axis=1)
 
-    if 'jk' in params.JK_RESAMPLING_METHOD.lower():
+    if 'jk' == params.JK_RESAMPLING_METHOD.lower():
         cov = df_joint.cov() * (N-1.) / N * (N-1.)
     elif 'bootstrap' in params.JK_RESAMPLING_METHOD.lower():
         cov = df_joint.cov()

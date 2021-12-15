@@ -71,7 +71,10 @@ class params:
         assert self.JK_RESAMPLING_METHOD in ['JK', 'BOOTSTRAP',
                                              'jk', 'bootstrap',
                                              'bootstrap_pairwise',
-                                             'bs_dt']
+                                             'bs_dt',
+                                             'tiled_jk',
+                                             'bs_dt_mass_boosted_est',
+                                             'bs_dt_mass_boosted_est_debiased']
 
         self.REPIXELIZE = c.getboolean('submap', 'repixelize')
         self.REPROJECT = c.getboolean('submap', 'reproject')
